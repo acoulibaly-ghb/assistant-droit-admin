@@ -101,18 +101,20 @@ if prompt := st.chat_input("Votre question sur le cours..."):
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
                 
-                # 2. Génération de l'audio (Partie ajoutée)
+                # 2. Génération de l'audio
                 try:
-                    # On crée l'audio à partir du texte
-                    tts = gTTS(text=response.text, lang='fr')
+                    # NETTOYAGE DU TEXTE : On enlève les ** et les # et les [ ]
+                    # Cette ligne retire les caractères Markdown gênants pour la lecture
+                    text_for_audio = re.sub(r'[\*#]', '', response.text)
                     
-                    # On le sauvegarde dans un fichier temporaire
+                    # On crée l'audio avec le texte propre
+                    tts = gTTS(text=text_for_audio, lang='fr')
+                    
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
                         tts.save(fp.name)
                         audio_path = fp.name
                     
-                    # On affiche le lecteur audio
                     st.audio(audio_path, format="audio/mp3")
                     
                 except Exception as e:
-                    st.warning(f"Note : La lecture audio n'a pas pu être générée ({e}), mais le texte est bon.")
+                    st.warning(f"Note : Pas d'audio disponible ({e})")
