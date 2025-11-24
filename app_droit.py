@@ -2,6 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 import os
 import glob
+from gtts import gTTS
+import tempfile
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Tuteur Droit Admin", page_icon="⚖️")
@@ -93,7 +95,24 @@ if prompt := st.chat_input("Votre question sur le cours..."):
     # Réponse IA
     if st.session_state.chat_session:
         with st.chat_message("assistant"):
-            with st.spinner("Recherche dans le cours..."):
+            with st.spinner("Recherche et synthèse vocale..."):
+                # 1. Génération du texte
                 response = st.session_state.chat_session.send_message(prompt)
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
+                
+                # 2. Génération de l'audio (Partie ajoutée)
+                try:
+                    # On crée l'audio à partir du texte
+                    tts = gTTS(text=response.text, lang='fr')
+                    
+                    # On le sauvegarde dans un fichier temporaire
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+                        tts.save(fp.name)
+                        audio_path = fp.name
+                    
+                    # On affiche le lecteur audio
+                    st.audio(audio_path, format="audio/mp3")
+                    
+                except Exception as e:
+                    st.warning(f"Note : La lecture audio n'a pas pu être générée ({e}), mais le texte est bon.")
