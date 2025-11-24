@@ -103,10 +103,20 @@ if prompt := st.chat_input("Votre question sur le cours..."):
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
                 
                 # 2. Génération de l'audio
-                try:
-                    # NETTOYAGE DU TEXTE : On enlève les ** et les # et les [ ]
-                    # Cette ligne retire les caractères Markdown gênants pour la lecture
+               try:
+                    # --- ÉTAPE DE NETTOYAGE DU TEXTE AUDIO ---
+                    
+                    # 1. On enlève les symboles Markdown (*, #)
                     text_for_audio = re.sub(r'[\*#]', '', response.text)
+                    
+                    # 2. (NOUVEAU) On remplace "p. 10" par "page 10"
+                    # L'expression régulière cherche "p." suivi d'un chiffre (\d+)
+                    text_for_audio = re.sub(r'p\.\s*(\d+)', r'page \1', text_for_audio)
+                    
+                    # 3. On remplace "Pr." par "Professeur" (au cas où il en reste)
+                    text_for_audio = text_for_audio.replace("Pr.", "Professeur")
+
+                    # -----------------------------------------
                     
                     # On crée l'audio avec le texte propre
                     tts = gTTS(text=text_for_audio, lang='fr')
