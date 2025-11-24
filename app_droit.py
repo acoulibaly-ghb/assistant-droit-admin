@@ -60,7 +60,7 @@ if "chat_session" not in st.session_state:
         if docs:
             # On configure le modèle avec les docs et le prompt
             model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
+                model_name="gemini-2.5-flash",
                 system_instruction=SYSTEM_PROMPT
             )
             # On lance le chat avec les documents en historique "caché"
