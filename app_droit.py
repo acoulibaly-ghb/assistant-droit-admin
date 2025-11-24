@@ -4,18 +4,17 @@ import os
 import glob
 from gtts import gTTS
 import tempfile
-import re   # <--- C'EST LUI QUI MANQUAIT !
+import re
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Tuteur Droit Admin", page_icon="⚖️")
 st.title("⚖️ Assistant Droit Administratif")
 
 # --- RÉCUPÉRATION DE LA CLÉ API SECRÈTE ---
-# Elle sera configurée dans l'étape suivante sur le site de Streamlit
 api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
 
-# --- PROMPT SYSTÈME (VOTRE VERSION V2) ---
+# --- PROMPT SYSTÈME ---
 SYSTEM_PROMPT = """
 CONTEXTE ET RÔLE :
 Tu es l'assistant pédagogique virtuel expert en Droit Administratif du Professeur Coulibaly.
@@ -47,26 +46,23 @@ def load_and_process_pdfs():
     status_text.text(f"Chargement de {len(pdf_files)} chapitres de cours...")
 
     for pdf in pdf_files:
-        # Envoi du fichier aux serveurs Google
         uploaded_file = genai.upload_file(pdf, mime_type="application/pdf")
         uploaded_files_refs.append(uploaded_file)
     
-    status_text.empty() # On efface le message
+    status_text.empty()
     return uploaded_files_refs
 
 # --- DÉMARRAGE DE LA SESSION ---
 if "chat_session" not in st.session_state:
     try:
-        # On charge les docs
         docs = load_and_process_pdfs()
         
         if docs:
-            # On configure le modèle avec les docs et le prompt
+            # Note : On utilise bien gemini-2.5-flash ici
             model = genai.GenerativeModel(
                 model_name="gemini-2.5-flash",
                 system_instruction=SYSTEM_PROMPT
             )
-            # On lance le chat avec les documents en historique "caché"
             st.session_state.chat_session = model.start_chat(
                 history=[
                     {"role": "user", "parts": docs},
@@ -80,7 +76,6 @@ if "chat_session" not in st.session_state:
         st.error(f"Erreur de connexion : {e}")
 
 # --- INTERFACE DE CHAT ---
-# Afficher l'historique
 if "messages" in st.session_state:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -88,37 +83,30 @@ if "messages" in st.session_state:
 
 # Zone de saisie
 if prompt := st.chat_input("Votre question sur le cours..."):
-    # Affichage utilisateur
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Réponse IA
+    # Réponse IA + Audio
     if st.session_state.chat_session:
         with st.chat_message("assistant"):
             with st.spinner("Recherche et synthèse vocale..."):
-                # 1. Génération du texte
+                # 1. Texte
                 response = st.session_state.chat_session.send_message(prompt)
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
                 
-                # 2. Génération de l'audio
-               try:
-                    # --- ÉTAPE DE NETTOYAGE DU TEXTE AUDIO ---
-                    
-                    # 1. On enlève les symboles Markdown (*, #)
+                # 2. Audio
+                try:
+                    # --- NETTOYAGE ---
+                    # Enlever * et #
                     text_for_audio = re.sub(r'[\*#]', '', response.text)
-                    
-                    # 2. (NOUVEAU) On remplace "p. 10" par "page 10"
-                    # L'expression régulière cherche "p." suivi d'un chiffre (\d+)
+                    # Remplacer p. 12 par page 12
                     text_for_audio = re.sub(r'p\.\s*(\d+)', r'page \1', text_for_audio)
-                    
-                    # 3. On remplace "Pr." par "Professeur" (au cas où il en reste)
+                    # Remplacer Pr. par Professeur
                     text_for_audio = text_for_audio.replace("Pr.", "Professeur")
-
-                    # -----------------------------------------
                     
-                    # On crée l'audio avec le texte propre
+                    # Génération
                     tts = gTTS(text=text_for_audio, lang='fr')
                     
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
@@ -128,4 +116,4 @@ if prompt := st.chat_input("Votre question sur le cours..."):
                     st.audio(audio_path, format="audio/mp3")
                     
                 except Exception as e:
-                    st.warning(f"Note : Pas d'audio disponible ({e})")
+                    st.warning(f"Note : Audio non disponible ({e})")
