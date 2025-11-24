@@ -4,6 +4,7 @@ import os
 import glob
 from gtts import gTTS
 import tempfile
+import re   # <--- C'EST LUI QUI MANQUAIT !
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Tuteur Droit Admin", page_icon="⚖️")
